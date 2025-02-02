@@ -1,0 +1,168 @@
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+
+#ładowanie i przygotowywwanie danych
+dane = pd.read_csv('regression_105.csv', header=None)
+dane.columns = ['X', 'y']
+print(dane.head())
+X = dane.iloc[:, :-1]
+y = dane.iloc[:, -1]
+
+#tworzenie i trenowanie modelu
+model = LinearRegression()
+model.fit(X, y)
+
+#wywietlanie wyniku
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, color='black', label='Rzeczywiste wartości')
+plt.plot(X, model.predict(X), color='green', label='Linia regresji')
+plt.xlabel('Zmienna niezależna (X)')
+plt.ylabel('Zmienna zależna (y)')
+plt.title('Regresja Liniowa: Rzeczywiste vs Prognozowane wartości')
+plt.legend()
+plt.show()
+
+print("Współczynnik regresji:", model.coef_[0])
+print("Wyraz wolny (intercept):", model.intercept_)  
+
+
+
+#----------------------------------------------------------------
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
+# Wczytanie danych
+data = pd.read_csv('sample_data/blobs_111.csv')  # Zmień na właściwą nazwę pliku
+
+scaler = StandardScaler()
+X = scaler.fit_transform(data)
+
+# Metoda łokcia
+inertias = []
+for k in range(1, 11):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(X)
+    inertias.append(kmeans.inertia_)
+
+plt.plot(range(1, 11), inertias, marker='o')
+plt.xlabel('Liczba klastrów')
+plt.ylabel('Inertia')
+plt.title('Metoda łokcia')
+plt.show()
+
+# Analiza sylwetkowa
+silhouette_scores = []
+for i in range(2, 11):
+    kmeans = KMeans(n_clusters=i, random_state=42)
+    kmeans.fit(scaled_data)
+    score = silhouette_score(scaled_data, kmeans.labels_)
+    silhouette_scores.append(score)
+
+print(f"Optymalna ilość klastrów: {silhouette_scores.index(max(silhouette_scores)) + 2}, score: {max(silhouette_scores):.2f} ")
+
+plt.plot(range(2, 11), silhouette_scores)
+plt.title('Współczynnik Silhouette')
+plt.xlabel('Liczba klastrów')
+plt.ylabel('Silhouette Score')
+plt.show()
+
+#Optymalna liczba klastrów jest wybierana na podstawie wykresu metody łokcia i współczynnika sylwetkowego.
+#Wysoki współczynnik sylwetkowy (>0.5) wskazuje na dobre oddzielenie klastrów.
+optimal_clusters = 9
+
+kmeans = KMeans(n_clusters=optimal_clusters, init='k-means++', max_iter=300, n_init=10, random_state=42)
+y_kmeans = kmeans.fit_predict(scaled_data)
+
+plt.scatter(scaled_data[:, 0], scaled_data[:, 1], c=y_kmeans, cmap='viridis')
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=50, c='red', label='Centroidy')
+plt.title(f'Klastrowanie KMeans (ilość klastrów = {optimal_clusters})')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+plt.show()
+
+
+#---------------------------------------------------------------------
+
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.utils import to_categorical
+
+# Wczytanie danych
+data = pd.read_csv('sample_data/classification_111.csv')  # Zmień na właściwą nazwę pliku
+
+
+data.columns = ['feature1', 'feature2', 'feature3', 'feature4', 'feature5', 
+                'feature6', 'feature7', 'feature8', 'feature9', 'feature10', 'target']
+
+X = data.drop('target', axis=1)
+y = data['target']
+
+# Podział na zbiory
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Standaryzacja i PCA
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+pca = PCA(n_components=0.95)  # Redukcja do 95% wariancji
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+print(f"Liczba cech po PCA: {X_train_pca.shape[0]}")
+
+# Model 1: Regresja Logistyczna
+lr = LogisticRegression()
+lr.fit(X_train_pca, y_train)
+y_pred_lr = lr.predict(X_test_pca)
+print("Logistic Regression Accuracy:", accuracy_score(y_test, y_pred_lr))
+
+# Model 2: Random Forest
+rf = RandomForestClassifier()
+rf.fit(X_train_pca, y_train)
+y_pred_rf = rf.predict(X_test_pca)
+print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+
+#model 3: SVC
+svm = SVC()
+svm.fit(X_train_pca, y_train)
+y_pred_svm = svm.predict(X_test_pca)
+print("SVM Accuracy:", accuracy_score(y_test, y_pred_svm))
+
+y_train_encoded = to_categorical(y_train)
+y_test_encoded = to_categorical(y_test)
+
+# Model 4: Sieć neuronowa (TensorFlow)
+model = Sequential([
+    Dense(16, activation='relu', input_shape=(X_train_pca.shape[1],)),
+    #Dense(32, activation='relu'),
+    Dense(3, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+history = model.fit(X_train_pca, y_train_encoded, epochs=10, batch_size=16, validation_split=0.3, verbose=0)
+
+# Wykres trenowania
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# Ewaluacja
+test_loss, test_acc = model.evaluate(X_test_pca, y_test_encoded, verbose=0)
+print(f"Neural Network Test Accuracy: {test_acc:.2f}")
